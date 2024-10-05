@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Tabla de DynamoDB para el backend de Gestor Personal"
+
+Resources:
+  GestorPersonalTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'GestorPersonal'
+      AttributeDefinitions:
+        - AttributeName: entidad
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: N 
+      KeySchema:
+        - AttributeName: entidad
+          KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  GestorPersonalStream:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      EventSourceArn: !GetAtt GestorPersonalTable.StreamArn
+      FunctionName: !GetAtt GestorPersonalFunction.Arn
+      StartingPosition: LATEST
+
+  GestorPersonalFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: oscarcarballopuebla
+        S3Key: gestorpersonal/backend/lambda.py
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaDynamoDBPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:UpdateItem
+                  - dynamodb:GetItem
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                  - dynamodb:ListStreams
+                  - dynamodb:DescribeStream
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
