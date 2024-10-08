@@ -1,11 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: "Tabla de DynamoDB para el backend de Gestor Personal"
 
-Parameters:
-  S3BucketName:
-    Type: String
-    Description: "El nombre del s3 bucket donde se guardan los archivos del proyecto"
-
 Resources:
   GestorPersonalTable:
     Type: AWS::DynamoDB::Table
@@ -24,51 +19,3 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-
-  GestorPersonalStream:
-    Type: AWS::Lambda::EventSourceMapping
-    Properties:
-      BatchSize: 1
-      EventSourceArn: !GetAtt GestorPersonalTable.StreamArn
-      FunctionName: !GetAtt GestorPersonalFunction.Arn
-      StartingPosition: LATEST
-
-  GestorPersonalFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.handler
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Runtime: python3.8
-      Code:
-        S3Bucket: !Ref S3BucketName
-        S3Key: gestorpersonal/backend/index.zip
-
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: LambdaDynamoDBPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:UpdateItem
-                  - dynamodb:GetItem
-                  - dynamodb:GetRecords
-                  - dynamodb:GetShardIterator
-                  - dynamodb:ListStreams
-                  - dynamodb:DescribeStream
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: '*'

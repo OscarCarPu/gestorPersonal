@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+  GestorPersonalAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: GestorPersonalAPI
+      Description: API para el backend de Gestor Personal
+
+  # /gestorpersonal
+  GestorPersonalResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref GestorPersonalAPI
+      ParentId: !GetAtt GestorPersonalAPI.RootResourceId
+      PathPart: gestorpersonal
+
+  # /gestorpersonal/insert body con entidad e id
+  GestorPersonalInsertResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref GestorPersonalAPI
+      ParentId: !Ref GestorPersonalResource
+      PathPart: insert
+
+  GestorPersonalInsertOPTIONSMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      ResourceId: !Ref GestorPersonalInsertResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: "{\"statusCode\": 200}"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  GestorPersonalInsertPOSTMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      ResourceId: !Ref GestorPersonalInsertResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - LambdaArn: !GetAtt GestorPersonalInsertLambda.Arn
+      
+  GestorPersonalInsertLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: insert.handler
+      Role: !GetAtt GestorPersonalLambdaRole.Arn
+      Runtime: python3.12
+      FunctionName: GestorPersonalInsert
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: backend/api/insert.zip
+
+  GestorPersonalLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+
+  Despliegue:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - GestorPersonalInsertPOSTMethod
+      - GestorPersonalInsertOPTIONSMethod
+    Properties:
+      RestApiId: !Ref GestorPersonalAPI
+      StageName: Prod
+
+      
