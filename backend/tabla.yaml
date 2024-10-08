@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: "Tabla de DynamoDB para el backend de Gestor Personal"
 
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: "El nombre del s3 bucket donde se guardan los archivos del proyecto"
+
 Resources:
   GestorPersonalTable:
     Type: AWS::DynamoDB::Table
@@ -10,7 +15,7 @@ Resources:
         - AttributeName: entidad
           AttributeType: S
         - AttributeName: id
-          AttributeType: N 
+          AttributeType: N
       KeySchema:
         - AttributeName: entidad
           KeyType: HASH
@@ -35,9 +40,10 @@ Resources:
     Properties:
       Handler: index.handler
       Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.8
       Code:
-        S3Bucket: oscarcarballopuebla
-        S3Key: gestorpersonal/backend/lambda.py
+        S3Bucket: !Ref S3BucketName
+        S3Key: gestorpersonal/backend/index.zip
 
   LambdaExecutionRole:
     Type: AWS::IAM::Role

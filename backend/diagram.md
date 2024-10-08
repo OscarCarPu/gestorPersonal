@@ -1,5 +1,5 @@
 # Gestor de Proyectos
-### Proyecto
+### Proyecto - proyecto
 | Atributo|Tipo|Comentarios|
 |-----|----|----|
 |id|N|AUTOINCREMENT|
@@ -10,21 +10,21 @@
 |descripcion|S||
 |etiquetas|S|Array con etiquetas|
 
-### Tiempo dedicado
+### Tiempo dedicado - tiempo_dedicado
 |Atributo|Tipo|Comentarios|
 |----|----|----|
 |id|N|AUTOINCREMENT|
-|tarea_id|N|Tarea.id NOT NULL|
+|tarea_id|N|tarea.id NOT NULL|
 |minutos|N|NOT NULL|
 |datetime|S|NOT NULL, por defecto now()|
 |descripcion|N||
 
-### Tarea
+### Tarea - tarea
 | Atributo|Tipo|Comentarios|
 |-----|----|----|
 |id|N|AUTOINCREMENT|
 |nombre|S|NOT NULL|
-|proyecto_id|N|Proyecto.id NOT NULL|
+|proyecto_id|N|proyecto.id NOT NULL|
 |padre_id|N|Tarea.id|
 |minutos_estimados|N||
 |minutos_dedicados|N|por defecto 0 NOT NULL|
@@ -36,52 +36,52 @@
 |descripcion|S||
 
 # Gestor de dinero
-### Cuenta
+### Cuenta - cuenta
 | Atributo|Tipo|Comentarios|
 |----|----|----|
 |id|N|AUTOINCREMENT|
 |nombre|S|NOT NULL|
 |cantidad|N|NOT NULL, defecto 0|
 
-### Tipo Movimiento
+### Tipo Movimiento - tipo_movimiento
 |Atributo|Tipo|Comentarios|
 |----|----|----|
 |id|N|AUTOINCREMENT|
 |nombre|S|NOT NULL|
 |tipo_movimiento|S|NOT NULL [transferencia,ingreso,gasto]|
 
-### Ingreso
+### Ingreso - ingreso
 |Atributo|Tipo|Comentarios|
 |----|----|----|
 |id|N|AUTOINCREMENT|
-|cuenta_id|N|Cuenta.id NOT NULL|
-|tipo_movimiento_id|N|TipoMovimiento.id NOT NULL|
+|cuenta_id|N|cuenta.id NOT NULL|
+|tipo_movimiento_id|N|tipo_movimiento.id NOT NULL|
 |cantidad|N|NOT NULL|
 |datetime|S|NOT NULL, por defecto now()|
 |descripcion|S||
 
-### Gasto
+### Gasto - gasto
 |Atributo|Tipo|Comentarios|
 |----|----|----|
 |id|N|AUTOINCREMENT|
-|cuenta_id|N|Cuenta.id NOT NULL|
-|tipo_movimiento_id|N|TipoMovimiento.id NOT NULL|
+|cuenta_id|N|cuenta.id NOT NULL|
+|tipo_movimiento_id|N|tipo_movimiento.id NOT NULL|
 |cantidad|N|NOT NULL|
 |datetime|S|NOT NULL, por defecto now()|
 |descripcion|S||
 
-### Transferencia
+### Transferencia - transferencia
 |Atributo|Tipo|Comentarios|
 |----|----|----|
 |id|N|AUTOINCREMENT|
-|cuenta_id_origen|N|Cuenta.id NOT NULL|
-|cuenta_id_destino|N|Cuenta.id NOT NULL|
-|tipo_movimiento_id|N|TipoMovimiento.id NOT NULL|
+|cuenta_id_origen|N|cuenta.id NOT NULL|
+|cuenta_id_destino|N|cuenta.id NOT NULL|
+|tipo_movimiento_id|N|tipo_movimiento.id NOT NULL|
 |cantidad|N|NOT NULL|
 |datetime|S|NOT NULL, por defecto now()|
 |descripcion|S||
 
-### Presupuesto
+### Presupuesto - presupuesto
 |Atributo|Tipo|Comentarios|
 |----|----|----|
 |id|N|AUTOINCREMENT|
@@ -89,4 +89,4 @@
 |descripcion|S||
 |datetime_comienzo|S|por defecto now() NOT NULL|
 |datetime_fin|S|NOT NULL|
-|tipo_movimiento_id|N|TipoMovimiento.id NOT NULL|
+|tipo_movimiento_id|N|tipo_movimiento.id NOT NULL
