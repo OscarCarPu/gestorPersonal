@@ -12,6 +12,30 @@ Resources:
       Name: GestorPersonalAPI
       Description: API para el backend de Gestor Personal
 
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: GestorPersonalUserPool
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+
+  GestorPersonalJWTAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: GestorPersonalJWTAuthorizer
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      RestApiId: !Ref GestorPersonalAPI
+      ProviderARNs:
+        - !GetAtt CognitoUserPool.Arn
+
   # /gestorpersonal
   GestorPersonalResource:
     Type: AWS::ApiGateway::Resource
@@ -20,7 +44,7 @@ Resources:
       ParentId: !GetAtt GestorPersonalAPI.RootResourceId
       PathPart: gestorpersonal
 
-  # /gestorpersonal/insert body con entidad e id
+  # /gestorpersonal/insert
   GestorPersonalInsertResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -55,7 +79,8 @@ Resources:
   GestorPersonalInsertPOSTMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: NONE
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref GestorPersonalJWTAuthorizer
       HttpMethod: POST
       ResourceId: !Ref GestorPersonalInsertResource
       RestApiId: !Ref GestorPersonalAPI
@@ -65,7 +90,7 @@ Resources:
         Uri: !Sub
           - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
           - LambdaArn: !GetAtt GestorPersonalInsertLambda.Arn
-      
+
   GestorPersonalInsertLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -106,6 +131,14 @@ Resources:
     DependsOn:
       - GestorPersonalInsertPOSTMethod
       - GestorPersonalInsertOPTIONSMethod
+      - GestorPersonalInsertResource
+      - GestorPersonalResource
+      - GestorPersonalAPI
+      - GestorPersonalJWTAuthorizer
+      - CognitoUserPool
+      - GestorPersonalInsertLambda
+      - PermisoGetorPersonalInsertLambda
+      - GestorPersonalLambdaRole
     Properties:
       RestApiId: !Ref GestorPersonalAPI
       StageName: Prod
