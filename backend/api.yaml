@@ -1,5 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
+Parameters:
+  LambdaBucket:
+    Type: String
+    Description: Nombre del bucket de S3 donde se encuentran los archivos de las lambdas
+
 Resources:
   GestorPersonalAPI:
     Type: AWS::ApiGateway::RestApi
@@ -70,7 +75,15 @@ Resources:
       FunctionName: GestorPersonalInsert
       Code:
         S3Bucket: !Ref LambdaBucket
-        S3Key: backend/api/insert.zip
+        S3Key: gestorpersonal/backend/lambdas/insert.zip
+
+  PermisoGetorPersonalInsertLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GestorPersonalInsertLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GestorPersonalAPI}/*/*/*"
 
   GestorPersonalLambdaRole:
     Type: AWS::IAM::Role
@@ -84,6 +97,7 @@ Resources:
             Action: sts:AssumeRole
       Path: /
       ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
         - arn:aws:iam::aws:policy/CloudWatchFullAccess
 
@@ -95,5 +109,3 @@ Resources:
     Properties:
       RestApiId: !Ref GestorPersonalAPI
       StageName: Prod
-
-      
