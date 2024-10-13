@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  LambdaBucket:
+    Type: String
+    Description: Nombre del bucket de S3 donde se encuentran los archivos de las lambdas
+
+Resources:
+  GestorPersonalAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: GestorPersonalAPI
+      Description: API para el backend de Gestor Personal
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: GestorPersonalUserPool
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+
+  GestorPersonalJWTAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: GestorPersonalJWTAuthorizer
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      RestApiId: !Ref GestorPersonalAPI
+      ProviderARNs:
+        - !GetAtt CognitoUserPool.Arn
+
+  # /gestorpersonal
+  GestorPersonalResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref GestorPersonalAPI
+      ParentId: !GetAtt GestorPersonalAPI.RootResourceId
+      PathPart: gestorpersonal
+
+  # /gestorpersonal/insert
+  GestorPersonalInsertResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref GestorPersonalAPI
+      ParentId: !Ref GestorPersonalResource
+      PathPart: insert
+
+  GestorPersonalInsertOPTIONSMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      ResourceId: !Ref GestorPersonalInsertResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: "{\"statusCode\": 200}"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  GestorPersonalInsertPOSTMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref GestorPersonalJWTAuthorizer
+      HttpMethod: POST
+      ResourceId: !Ref GestorPersonalInsertResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - LambdaArn: !GetAtt GestorPersonalInsertLambda.Arn
+
+  GestorPersonalInsertLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: insert.handler
+      Role: !GetAtt GestorPersonalLambdaRole.Arn
+      Runtime: python3.12
+      FunctionName: GestorPersonalInsert
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: gestorpersonal/backend/lambdas/insert.zip
+
+  PermisoGetorPersonalInsertLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GestorPersonalInsertLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GestorPersonalAPI}/*/*/*"
+
+  GestorPersonalLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+
+  Despliegue:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - GestorPersonalInsertPOSTMethod
+      - GestorPersonalInsertOPTIONSMethod
+      - GestorPersonalInsertResource
+      - GestorPersonalResource
+      - GestorPersonalAPI
+      - GestorPersonalJWTAuthorizer
+      - CognitoUserPool
+      - GestorPersonalInsertLambda
+      - PermisoGetorPersonalInsertLambda
+      - GestorPersonalLambdaRole
+    Properties:
+      RestApiId: !Ref GestorPersonalAPI
+      StageName: Prod
