@@ -31,9 +31,46 @@
 |minutos_dedicados_total|N|suma minutos_dedicados hijos|
 |prioridad|N|[0-5]|
 |datetime_creacion|S|valor fijo, now() NOT NULL|
+|datetime_finalizada|S||
 |datetime_fecha_limite|S||
 |estado|S|[nuevo, en curso, en pausa, en espera, cerrado] NOT NULL|
 |descripcion|S||
+
+### Recado - recado
+| Atributo|Tipo|Comentarios|
+|----|----|----|
+|id|N|AUTOINCREMENT|
+|nombre|S|NOT NULL|
+|tarea_id|N|tarea.id NOT NULL|
+|datetime_creacion|S|valor fijo, now() NOT NULL|
+|minutos_dedicados|N|por defecto 0 NOT NULL|
+|datetime_finalizada|S||
+|estado|S|[pendiente, completado] NOT NULL|
+|descripcion|S||
+
+# Calendario y Horario
+### Evento - evento
+|Atributo|Tipo|Comentario|
+|----|----|----|
+|id|N|AUTOINCREMENT|
+|nombre|S|NOT NULL|
+|descripcion|S||
+|datetime_inicio|S|NOT NULL|
+|datetime_fin|S|NOT NULL|
+|datetime_creacion|S|now()|
+|evento_id|N|tarea.id or recado.id NOT NULL|
+
+### Horario - horario
+|Attributo|Tipo|Comentario|
+|----|----|----|
+|id|N|AUTOINCREMENT|
+|evento_id|N|tarea.id or recado.id NOT NULL|
+|time_inicio|S|NOT NULL|
+|time_fin|S|NOT NULL|
+|datetime_creacion|S|now()|
+|date_inicio|S|NOT NULL|
+|date_fin|S|NOT NULL|
+|dias|S|array con dias semana 0-6 NOT NULL, puede ir vacio si no se repite|
 
 # Gestor de dinero
 ### Cuenta - cuenta
