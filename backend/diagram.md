@@ -25,7 +25,7 @@
 |id|N|AUTOINCREMENT|
 |nombre|S|NOT NULL|
 |proyecto_id|N|proyecto.id NOT NULL|
-|padre_id|N|Tarea.id|
+|padre_id|N|parea.id|
 |minutos_estimados|N||
 |minutos_dedicados|N|por defecto 0 NOT NULL|
 |minutos_dedicados_total|N|suma minutos_dedicados hijos|
@@ -43,9 +43,9 @@
 |nombre|S|NOT NULL|
 |tarea_id|N|tarea.id NOT NULL|
 |datetime_creacion|S|valor fijo, now() NOT NULL|
-|minutos_dedicados|N|por defecto 0 NOT NULL|
+|prioridad|N|[0-5]|
 |datetime_finalizada|S||
-|estado|S|[pendiente, completado] NOT NULL|
+|estado|S|[nuevo, en curso, en pausa, en espera, completado] NOT NULL|
 |descripcion|S||
 
 # Calendario y Horario
@@ -58,13 +58,13 @@
 |datetime_inicio|S|NOT NULL|
 |datetime_fin|S|NOT NULL|
 |datetime_creacion|S|now()|
-|evento_id|N|tarea.id or recado.id NOT NULL|
+|tarea_id|N|tarea.id NOT NULL|
 
 ### Horario - horario
 |Attributo|Tipo|Comentario|
 |----|----|----|
 |id|N|AUTOINCREMENT|
-|evento_id|N|tarea.id or recado.id NOT NULL|
+|tarea_id|N|tarea.id NOT NULL|
 |time_inicio|S|NOT NULL|
 |time_fin|S|NOT NULL|
 |datetime_creacion|S|now()|
