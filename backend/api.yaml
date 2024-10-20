@@ -6,12 +6,6 @@ Parameters:
     Description: Nombre del bucket de S3 donde se encuentran los archivos de las lambdas
 
 Resources:
-  GestorPersonalAPI:
-    Type: AWS::ApiGateway::RestApi
-    Properties:
-      Name: GestorPersonalAPI
-      Description: API para el backend de Gestor Personal
-
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -26,6 +20,12 @@ Resources:
           RequireSymbols: true
           RequireUppercase: true
 
+  GestorPersonalAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: GestorPersonalAPI
+      Description: API para el backend de Gestor Personal
+
   GestorPersonalJWTAuthorizer:
     Type: AWS::ApiGateway::Authorizer
     Properties:
@@ -36,28 +36,54 @@ Resources:
       ProviderARNs:
         - !GetAtt CognitoUserPool.Arn
 
-  # /gestorpersonal
-  GestorPersonalResource:
+  GestorPersonalLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/AmazonAPIGatewayInvokeFullAccess
+        - arn:aws:iam::aws:policy/AmazonAPIGatewayAdministrator
+        - arn:aws:iam::aws:policy/AmazonCognitoPowerUser
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+      Policies:
+        - PolicyName: GestorPersonalLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - dynamodb:*
+                Resource: "*"
+
+  # /basic
+  GestorPersonalBasicResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId: !Ref GestorPersonalAPI
       ParentId: !GetAtt GestorPersonalAPI.RootResourceId
-      PathPart: gestorpersonal
+      PathPart: basic
 
-  # /gestorpersonal/insert
-  GestorPersonalInsertResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref GestorPersonalAPI
-      ParentId: !Ref GestorPersonalResource
-      PathPart: insert
-
-  GestorPersonalInsertOPTIONSMethod:
+  GestorPersonalBasicOPTIONSMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       AuthorizationType: NONE
       HttpMethod: OPTIONS
-      ResourceId: !Ref GestorPersonalInsertResource
+      ResourceId: !Ref GestorPersonalBasicResource
       RestApiId: !Ref GestorPersonalAPI
       Integration:
         Type: MOCK
@@ -76,68 +102,313 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
 
-  GestorPersonalInsertPOSTMethod:
+  GestorPersonalBasicPOSTMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       AuthorizationType: COGNITO_USER_POOLS
       AuthorizerId: !Ref GestorPersonalJWTAuthorizer
       HttpMethod: POST
-      ResourceId: !Ref GestorPersonalInsertResource
+      ResourceId: !Ref GestorPersonalBasicResource
       RestApiId: !Ref GestorPersonalAPI
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri: !Sub
           - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
-          - LambdaArn: !GetAtt GestorPersonalInsertLambda.Arn
+          - LambdaArn: !GetAtt GestorPersonalBasicPostLambda.Arn
 
-  GestorPersonalInsertLambda:
+  GestorPersonalBasicPostLambda:
     Type: AWS::Lambda::Function
     Properties:
-      Handler: insert.handler
+      Handler: basic_post.handler
       Role: !GetAtt GestorPersonalLambdaRole.Arn
       Runtime: python3.12
-      FunctionName: GestorPersonalInsert
+      FunctionName: GestorPersonalBasicPost
       Code:
         S3Bucket: !Ref LambdaBucket
-        S3Key: gestorpersonal/backend/lambdas/insert.zip
+        S3Key: gestorpersonal/backend/lambdas/basic_post.zip
 
-  PermisoGetorPersonalInsertLambda:
+  PermisoGestorPersonalBasicPostLambda:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt GestorPersonalInsertLambda.Arn
+      FunctionName: !GetAtt GestorPersonalBasicPostLambda.Arn
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GestorPersonalAPI}/*/*/*"
 
-  GestorPersonalLambdaRole:
-    Type: AWS::IAM::Role
+  # /basic/{id}
+  GestorPersonalBasicIdResource:
+    Type: AWS::ApiGateway::Resource
     Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
-        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+      RestApiId: !Ref GestorPersonalAPI
+      ParentId: !Ref GestorPersonalBasicResource
+      PathPart: "{id}"
 
+  GestorPersonalBasicIdOPTIONSMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      ResourceId: !Ref GestorPersonalBasicIdResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: "{\"statusCode\": 200}"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,DELETE,PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  GestorPersonalBasicIdGETMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref GestorPersonalJWTAuthorizer
+      HttpMethod: GET
+      ResourceId: !Ref GestorPersonalBasicIdResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - LambdaArn: !GetAtt GestorPersonalBasicGetLambda.Arn
+
+  GestorPersonalBasicIdDELETEMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref GestorPersonalJWTAuthorizer
+      HttpMethod: DELETE
+      ResourceId: !Ref GestorPersonalBasicIdResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - LambdaArn: !GetAtt GestorPersonalBasicDeleteLambda.Arn
+
+  GestorPersonalBasicIdPUTMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref GestorPersonalJWTAuthorizer
+      HttpMethod: PUT
+      ResourceId: !Ref GestorPersonalBasicIdResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - LambdaArn: !GetAtt GestorPersonalBasicPutLambda.Arn
+
+  GestorPersonalBasicGetLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: basic_get.handler
+      Role: !GetAtt GestorPersonalLambdaRole.Arn
+      Runtime: python3.12
+      FunctionName: GestorPersonalBasicGet
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: gestorpersonal/backend/lambdas/basic_get.zip
+
+  GestorPersonalBasicDeleteLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: basic_delete.handler
+      Role: !GetAtt GestorPersonalLambdaRole.Arn
+      Runtime: python3.12
+      FunctionName: GestorPersonalBasicDelete
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: gestorpersonal/backend/lambdas/basic_delete.zip
+
+  GestorPersonalBasicPutLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: basic_put.handler
+      Role: !GetAtt GestorPersonalLambdaRole.Arn
+      Runtime: python3.12
+      FunctionName: GestorPersonalBasicPut
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: gestorpersonal/backend/lambdas/basic_put.zip
+
+  PermisoGestorPersonalBasicGetLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GestorPersonalBasicGetLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GestorPersonalAPI}/*/*/*"
+
+  PermisoGestorPersonalBasicDeleteLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GestorPersonalBasicDeleteLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GestorPersonalAPI}/*/*/*"
+
+  PermisoGestorPersonalBasicPutLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GestorPersonalBasicPutLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GestorPersonalAPI}/*/*/*"
+
+  # /list/{entidad}
+  GestorPersonalListResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref GestorPersonalAPI
+      ParentId: !GetAtt GestorPersonalAPI.RootResourceId
+      PathPart: list
+
+  GestorPersonalListEntidadResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref GestorPersonalAPI
+      ParentId: !Ref GestorPersonalListResource
+      PathPart: "{entidad}"
+
+  GestorPersonalListEntidadOPTIONSMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      ResourceId: !Ref GestorPersonalListEntidadResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: "{\"statusCode\": 200}"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  GestorPersonalListEntidadGETMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref GestorPersonalJWTAuthorizer
+      HttpMethod: GET
+      ResourceId: !Ref GestorPersonalListEntidadResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - LambdaArn: !GetAtt GestorPersonalListGetLambda.Arn
+
+  GestorPersonalListEntidadPOSTMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref GestorPersonalJWTAuthorizer
+      HttpMethod: POST
+      ResourceId: !Ref GestorPersonalListEntidadResource
+      RestApiId: !Ref GestorPersonalAPI
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - LambdaArn: !GetAtt GestorPersonalListPostLambda.Arn
+
+  GestorPersonalListGetLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: list_get.handler
+      Role: !GetAtt GestorPersonalLambdaRole.Arn
+      Runtime: python3.12
+      FunctionName: GestorPersonalListGet
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: gestorpersonal/backend/lambdas/list_get.zip
+
+  GestorPersonalListPostLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: list_post.handler
+      Role: !GetAtt GestorPersonalLambdaRole.Arn
+      Runtime: python3.12
+      FunctionName: GestorPersonalListPost
+      Code:
+        S3Bucket: !Ref LambdaBucket
+        S3Key: gestorpersonal/backend/lambdas/list_post.zip
+
+  PermisoGestorPersonalListGetLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GestorPersonalListGetLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GestorPersonalAPI}/*/*/*"
+
+  PermisoGestorPersonalListPostLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt GestorPersonalListPostLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${GestorPersonalAPI}/*/*/*"
+
+  # Update deployment dependencies
   Despliegue:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
-      - GestorPersonalInsertPOSTMethod
-      - GestorPersonalInsertOPTIONSMethod
-      - GestorPersonalInsertResource
-      - GestorPersonalResource
+      - GestorPersonalBasicPOSTMethod
+      - GestorPersonalBasicOPTIONSMethod
+      - GestorPersonalBasicIdOPTIONSMethod
+      - GestorPersonalBasicIdGETMethod
+      - GestorPersonalBasicIdDELETEMethod
+      - GestorPersonalBasicIdPUTMethod
+      - GestorPersonalListEntidadOPTIONSMethod
+      - GestorPersonalListEntidadGETMethod
+      - GestorPersonalListEntidadPOSTMethod
+      - GestorPersonalBasicResource
+      - GestorPersonalBasicIdResource
+      - GestorPersonalListResource
+      - GestorPersonalListEntidadResource
       - GestorPersonalAPI
       - GestorPersonalJWTAuthorizer
       - CognitoUserPool
-      - GestorPersonalInsertLambda
-      - PermisoGetorPersonalInsertLambda
+      - GestorPersonalBasicPostLambda
+      - GestorPersonalBasicGetLambda
+      - GestorPersonalBasicDeleteLambda
+      - GestorPersonalBasicPutLambda
+      - GestorPersonalListGetLambda
+      - GestorPersonalListPostLambda
+      - PermisoGestorPersonalBasicPostLambda
+      - PermisoGestorPersonalBasicGetLambda
+      - PermisoGestorPersonalBasicDeleteLambda
+      - PermisoGestorPersonalBasicPutLambda
+      - PermisoGestorPersonalListGetLambda
+      - PermisoGestorPersonalListPostLambda
       - GestorPersonalLambdaRole
     Properties:
       RestApiId: !Ref GestorPersonalAPI
