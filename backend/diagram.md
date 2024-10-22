@@ -25,7 +25,7 @@
 |id|N|AUTOINCREMENT|
 |nombre|S|NOT NULL|
 |proyecto_id|N|proyecto.id NOT NULL|
-|padre_id|N|parea.id|
+|padre_id|N|tarea.id|
 |minutos_estimados|N||
 |minutos_dedicados|N|por defecto 0 NOT NULL|
 |minutos_dedicados_total|N|suma minutos_dedicados hijos|

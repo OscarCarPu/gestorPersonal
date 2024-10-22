@@ -65,6 +65,7 @@ def insert_proyecto(body):
   allowed_values = {
     'estado': ['nuevo', 'en curso','en pausa', 'en espera', 'cerrado']
   }
+  has_to_be_list = ['etiquetas']
   for attr in obligatory_attributes:
     if attr not in body:
       raise Exception('Falta el atributo ' + attr)
@@ -77,6 +78,10 @@ def insert_proyecto(body):
     if key in body and body[key] not in values:
       raise Exception('Valor no permitido para ' + key)
 
+  for key in has_to_be_list:
+    if key in body and not isinstance(body[key], list):
+      raise Exception('El atributo ' + key + ' debe ser una lista')
+    
   body['id'] = get_autoincrement_id('proyecto')
   tabla.put_item(Item=body)
   return body

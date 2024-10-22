@@ -1,7 +1,7 @@
 import os
 import time
 import boto3
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,6 +12,7 @@ AWS_REGION = os.getenv('AWS_REGION')
 STACK_NAME = 'gestorPersonalTestApi'
 TEMPLATE_FILE = 'api.yaml'
 LAMBDA_BUCKET = os.getenv('S3_BUCKET')
+ENV_FILE = '.env'
 
 # Initialize boto3 CloudFormation client
 cf_client = boto3.client(
@@ -114,6 +115,7 @@ def wait_for_stack_completion():
             stack_status = response['Stacks'][0]['StackStatus']
             if stack_status in ['CREATE_COMPLETE', 'UPDATE_COMPLETE']:
                 print(f'Stack {STACK_NAME} completed successfully with status: {stack_status}')
+                save_api_url()
                 break
             elif stack_status in ['CREATE_FAILED', 'ROLLBACK_FAILED', 'ROLLBACK_COMPLETE']:
                 print(f'Stack {STACK_NAME} failed with status: {stack_status}')
@@ -123,9 +125,25 @@ def wait_for_stack_completion():
         except cf_client.exceptions.ClientError as e:
             print(f'Error checking stack status: {e}')
 
+def save_api_url():
+    try:
+        response = cf_client.describe_stacks(StackName=STACK_NAME)
+        stacks = response['Stacks']
+        if stacks and 'Outputs' in stacks[0]:
+            outputs = stacks[0]['Outputs']
+            print(f'Stack outputs: {outputs}')
+            api_url = next(output['OutputValue'] for output in outputs if output['OutputKey'] == 'GestorPersonalAPIUrl')
+            set_key(ENV_FILE, 'API_URL', api_url)
+            print(f'API URL saved to {ENV_FILE}: {api_url}')
+        else:
+            print(f'No Outputs found for stack {STACK_NAME}.')
+    except Exception as e:
+        print(f'Error retrieving API URL: {e}')
+
 def main():
     template_url = upload_template_to_s3()
     update_stack(template_url)
+    save_api_url()
 
 if __name__ == '__main__':
     main()

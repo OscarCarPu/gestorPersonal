@@ -1,0 +1,145 @@
+[
+  {
+    "test_id":1,
+    "type": "POST",
+    "endpoint": "/basic",
+    "body": {
+      "entidad": "proyecto",
+      "nombre": "Juan"
+    },
+    "expected_response": {
+      "status": 200,
+      "body": {
+        "entidad": "proyecto",
+        "nombre": "Juan",
+        "datetime_creacion": "2021-08-01T00:00:00.000Z",
+        "minutos_dedicados": 0,
+        "estado": "nuevo",
+        "descripcion": "",
+        "etiquetas": [],
+        "id": 1
+      }
+    }
+  },
+  {
+    "test_id":2,
+    "type": "POST",
+    "endpoint": "/basic",
+    "body": {
+      "entidad": "proyecto",
+      "minutos_dedicados": 10
+    },
+    "expected_response": {
+      "status": 400,
+      "body": "Falta el atributo nombre"
+    }
+  },
+  {
+    "test_id":3,
+    "type": "POST",
+    "endpoint": "/basic",
+    "body": {
+      "entidad": "proyecto",
+      "nombre": "Jose",
+      "estado": "nueva"
+    },
+    "expected_response": {
+      "status": 400,
+      "body": "Valor no permitido para estado"
+    }
+  },
+  {
+    "test_id":4,
+    "type": "POST",
+    "endpoint": "/basic",
+    "body": {
+      "entidad": "proyecto",
+      "nombre": "Jose",
+      "estado": "nuevo",
+      "etiquetas": "etiqueta1"
+    },
+    "expected_response": {
+      "status": 400,
+      "body": "El atributo etiquetas debe ser una lista"
+    }
+  },
+  {
+    "test_id":5,
+    "type": "POST",
+    "endpoint": "/basic",
+    "body": {
+      "entidad": "proyecto",
+      "nombre": "Jose",
+      "estado": "nuevo",
+      "etiquetas": ["etiqueta1", "etiqueta2"]
+    },
+    "expected_response": {
+      "status": 200,
+      "body": {
+        "entidad": "proyecto",
+        "nombre": "Jose",
+        "datetime_creacion": "2021-08-01T00:00:00.000Z",
+        "minutos_dedicados": 0,
+        "estado": "nuevo",
+        "descripcion": "",
+        "etiquetas": ["etiqueta1", "etiqueta2"],
+        "id": 2
+      }
+    }
+  },
+  {
+    "test_id":6,
+    "type": "POST",
+    "endpoint": "/basic",
+    "body": {
+      "entidad": "tarea",
+      "nombre": "Tarea 1",
+      "estado": "nuevo",
+      "proyecto_id": 3,
+      "prioridad": 1
+    },
+    "expected_response": {
+      "status": 400,
+      "body": "No existe el proyecto con id 3"
+    }
+  },
+  {
+    "test_id":7,
+    "type": "POST",
+    "endpoint": "/basic",
+    "body": {
+      "entidad": "tarea",
+      "nombre": "Tarea 1",
+      "estado": "nuevo",
+      "proyecto_id": 1,
+      "prioridad": 6
+    },
+    "expected_response": {
+      "status": 400,
+      "body": "Valor no permitido para prioridad"
+    }
+  },
+  {
+    "test_id":8,
+    "type": "POST",
+    "endpoint": "/basic",
+    "body": {
+      "entidad": "tarea",
+      "nombre": "Tarea 1",
+      "estado": "nuevo",
+      "proyecto_id": 1,
+      "prioridad": 1
+    },
+    "expected_response": {
+      "status": 200,
+      "body": {
+        "id": 1,
+        "nombre": "Tarea 1",
+        "proyecto_id": 1,
+        "padre_id": 1,
+        "estado": "nuevo"
+      }
+    }
+  }
+
+]

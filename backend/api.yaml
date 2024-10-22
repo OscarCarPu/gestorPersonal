@@ -413,3 +413,8 @@ Resources:
     Properties:
       RestApiId: !Ref GestorPersonalAPI
       StageName: Prod
+
+Outputs:
+  GestorPersonalAPIUrl:
+    Description: "URL of the Gestor Personal API"
+    Value: !Sub "https://${GestorPersonalAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod"     

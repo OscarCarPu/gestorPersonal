@@ -5,11 +5,31 @@ from dotenv import load_dotenv, set_key
 # Load environment variables from .env file
 load_dotenv()
 
-USER_POOL_ID = os.getenv('USER_POOL_ID')
 CLIENT_ID = os.getenv('CLIENT_ID')
 NEW_USERNAME = os.getenv('USERNAME')
 NEW_PASSWORD = os.getenv('USER_PASSWORD')
 ENV_FILE_PATH = '.env'
+
+def get_user_pool_id():
+    client = boto3.client('cognito-idp', region_name='eu-south-2')
+    
+    try:
+        response = client.list_user_pools(MaxResults=10)
+        user_pools = response['UserPools']
+        
+        if not user_pools:
+            raise Exception("No user pools found.")
+        
+        # Select the first user pool (or implement your own selection logic)
+        user_pool_id = user_pools[0]['Id']
+        os.environ['USER_POOL_ID'] = user_pool_id
+        print(f"User pool ID set to: {user_pool_id}")
+        return user_pool_id
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+USER_POOL_ID = get_user_pool_id()
 
 def create_or_update_user():
     client = boto3.client('cognito-idp', region_name='eu-south-2')
@@ -135,8 +155,9 @@ def update_env_file(key, value, env_file_path=ENV_FILE_PATH):
     print(f"Updated {key} in {env_file_path} to {value}")
 
 if __name__ == '__main__':
-    create_or_update_user()
-    client_id = create_or_update_user_pool_client()
-    if client_id:
-        update_env_file('CLIENT_ID', client_id)
-        print(f"Environment variable CLIENT_ID set to: {client_id}")
+    if USER_POOL_ID:
+        create_or_update_user()
+        client_id = create_or_update_user_pool_client()
+        if client_id:
+            update_env_file('CLIENT_ID', client_id)
+            print(f"Environment variable CLIENT_ID set to: {client_id}")
