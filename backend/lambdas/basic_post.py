@@ -1,10 +1,10 @@
 import boto3
 import json
 from datetime import datetime
-from boto3.dynamodb.conditions import Key
 from decimal import Decimal
 
 dynamodb = boto3.resource('dynamodb')
+tabla = dynamodb.Table('GestorPersonal')
 
 class DecimalEncoder(json.JSONEncoder):
   def default(self, o):
@@ -54,7 +54,6 @@ def get_autoincrement_id(entidad):
 #region Gestor de Proyectos
 
 def insert_proyecto(body):
-  tabla = dynamodb.Table('GestorPersonal')
   default_attributes = {
     'datetime_creacion': datetime.now().isoformat(),
     'minutos_dedicados': 0,
@@ -83,7 +82,6 @@ def insert_proyecto(body):
   return body
 
 def insert_tarea(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['nombre', 'proyecto_id']
   default_attributes = {
     'padre_id': None,
@@ -142,7 +140,6 @@ def insert_tarea(body):
   return body
 
 def insert_recado(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['nombre','tarea_id']
   default_attributes = {
     'datetime_creacion': datetime.now().isoformat(),
@@ -195,7 +192,6 @@ def insert_recado(body):
   return body
 
 def insert_tiempo_dedicado(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['tarea_id', 'minutos']
   default_attributes = {
     'datetime': datetime.now().isoformat(),
@@ -239,7 +235,6 @@ def insert_tiempo_dedicado(body):
   return body
 
 def actualizar_minutos_tarea(tarea_id, minutos):
-  tabla = dynamodb.Table('GestorPersonal')
   response = tabla.query(
     AttributesToGet=['minutos_dedicados_total'],
     KeyConditions={
@@ -275,7 +270,6 @@ def actualizar_minutos_tarea(tarea_id, minutos):
   )
 
 def actualizar_minutos_padre(padre_id, minutos):
-  tabla = dynamodb.Table('GestorPersonal')
   response = tabla.query(
     AttributesToGet=['minutos_dedicados_total'],
     KeyConditions={
@@ -311,7 +305,6 @@ def actualizar_minutos_padre(padre_id, minutos):
   )
 
 def actualizar_minutos_proyecto(proyecto_id, minutos):
-  tabla = dynamodb.Table('GestorPersonal')
   tabla.update_item(
     Key={
       'entidad': 'proyecto',
@@ -327,7 +320,6 @@ def actualizar_minutos_proyecto(proyecto_id, minutos):
 
 #region Calendario y Horario
 def insert_evento(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['nombre', 'datetime_inicio', 'datetime_fin', 'tarea.id']
   default_attributes = {
     'descripcion': '',
@@ -369,7 +361,6 @@ def insert_evento(body):
   return body
 
 def insert_horario(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['tarea_id','time_inicio','time_fin','date_inicio','date_fin']
   default_attributes = {
     'datetime_creacion': datetime.now().isoformat(),
@@ -419,8 +410,10 @@ def insert_horario(body):
   tabla.put_item(Item=body)
   return body
 
+#endregion
+#region Finanzas
+
 def insert_cuenta(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['nombre']
   default_attributes = {
     'cantidad': 0
@@ -438,7 +431,6 @@ def insert_cuenta(body):
   return body
 
 def insert_tipo_movimiento(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['nombre','tipo_movimiento']
   default_attributes = {
     'descripcion': ''
@@ -463,7 +455,6 @@ def insert_tipo_movimiento(body):
   return body
 
 def insert_ingreso(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['cuenta_id','tipo_movimiento_id','cantidad']
   default_attributes = {
     'datetime': datetime.now().isoformat(),
@@ -517,7 +508,6 @@ def insert_ingreso(body):
   return body
 
 def insert_gasto(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['cuenta_id','tipo_movimiento_id','cantidad']
   default_attributes = {
     'datetime': datetime.now().isoformat(),
@@ -571,7 +561,6 @@ def insert_gasto(body):
   return body
 
 def insert_transferencia(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['cuenta_id_origen','cuenta_id_destino','tipo_movimiento_id','cantidad']
   default_attributes = {
     'datetime': datetime.now().isoformat(),
@@ -640,7 +629,6 @@ def insert_transferencia(body):
   return body
 
 def insert_presupuesto(body):
-  tabla = dynamodb.Table('GestorPersonal')
   obligatory_attributes = ['cantidad','tipo_movimiento_id','datetime_fin']
   default_attributes = {
     'descripcion': '',
@@ -681,3 +669,5 @@ def insert_presupuesto(body):
   body['id'] = get_autoincrement_id('presupuesto')
   tabla.put_item(Item=body)
   return body
+
+#endregion
