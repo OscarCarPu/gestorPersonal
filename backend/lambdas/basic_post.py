@@ -418,3 +418,266 @@ def insert_horario(body):
   body['id'] = get_autoincrement_id('horario')
   tabla.put_item(Item=body)
   return body
+
+def insert_cuenta(body):
+  tabla = dynamodb.Table('GestorPersonal')
+  obligatory_attributes = ['nombre']
+  default_attributes = {
+    'cantidad': 0
+  }
+  for attr in obligatory_attributes:
+    if attr not in body:
+      raise Exception('Falta el atributo ' + attr)
+
+  for key, value in default_attributes.items():
+    if key not in body:
+      body[key] = value
+
+  body['id'] = get_autoincrement_id('cuenta')
+  tabla.put_item(Item=body)
+  return body
+
+def insert_tipo_movimiento(body):
+  tabla = dynamodb.Table('GestorPersonal')
+  obligatory_attributes = ['nombre','tipo_movimiento']
+  default_attributes = {
+    'descripcion': ''
+  }
+  allowed_values = {
+    'tipo_movimiento': ['transferencia','ingreso','gasto']
+  } 
+  for attr in obligatory_attributes:
+    if attr not in body:
+      raise Exception('Falta el atributo ' + attr)
+
+  for key, value in default_attributes.items():
+    if key not in body:
+      body[key] = value
+
+  for key, values in allowed_values.items():
+    if key in body and body[key] not in values:
+      raise Exception('Valor no permitido para ' + key)
+
+  body['id'] = get_autoincrement_id('tipo_movimiento')
+  tabla.put_item(Item=body)
+  return body
+
+def insert_ingreso(body):
+  tabla = dynamodb.Table('GestorPersonal')
+  obligatory_attributes = ['cuenta_id','tipo_movimiento_id','cantidad']
+  default_attributes = {
+    'datetime': datetime.now().isoformat(),
+    'descripcion': ''
+  }
+  check_values = {
+    'cuenta_id': 'cuenta',
+    'tipo_movimiento_id': 'tipo_movimiento'
+  }
+  for attr in obligatory_attributes:
+    if attr not in body:
+      raise Exception('Falta el atributo ' + attr)
+
+  for key, value in default_attributes.items():
+    if key not in body:
+      body[key] = value
+
+  for key, value in check_values.items():
+    if key in body:
+      response = tabla.query(
+        AttributesToGet=['id'],
+        KeyConditions={
+          'entidad': {
+            'AttributeValueList': [value],
+            'ComparisonOperator': 'EQ'
+          },
+          'id': {
+            'AttributeValueList': [body[key]],
+            'ComparisonOperator': 'EQ'
+          }
+        },
+        Limit=1,
+      )
+      items = response.get('Items', [])
+      if len(items) == 0:
+        raise Exception('No existe el ' + value + ' con id ' + str(body[key]))
+
+  tabla.update_item(
+    Key={
+      'entidad': 'cuenta',
+      'id': body['cuenta_id']
+    },
+    UpdateExpression='SET cantidad = cantidad + :val',
+    ExpressionAttributeValues={
+      ':val': Decimal(body['cantidad'])
+    }
+  )
+
+  body['id'] = get_autoincrement_id('ingreso')
+  tabla.put_item(Item=body)
+  return body
+
+def insert_gasto(body):
+  tabla = dynamodb.Table('GestorPersonal')
+  obligatory_attributes = ['cuenta_id','tipo_movimiento_id','cantidad']
+  default_attributes = {
+    'datetime': datetime.now().isoformat(),
+    'descripcion': ''
+  }
+  check_values = {
+    'cuenta_id': 'cuenta',
+    'tipo_movimiento_id': 'tipo_movimiento'
+  }
+  for attr in obligatory_attributes:
+    if attr not in body:
+      raise Exception('Falta el atributo ' + attr)
+
+  for key, value in default_attributes.items():
+    if key not in body:
+      body[key] = value
+
+  for key, value in check_values.items():
+    if key in body:
+      response = tabla.query(
+        AttributesToGet=['id'],
+        KeyConditions={
+          'entidad': {
+            'AttributeValueList': [value],
+            'ComparisonOperator': 'EQ'
+          },
+          'id': {
+            'AttributeValueList': [body[key]],
+            'ComparisonOperator': 'EQ'
+          }
+        },
+        Limit=1,
+      )
+      items = response.get('Items', [])
+      if len(items) == 0:
+        raise Exception('No existe el ' + value + ' con id ' + str(body[key]))
+
+  tabla.update_item(
+    Key={
+      'entidad': 'cuenta',
+      'id': body['cuenta_id']
+    },
+    UpdateExpression='SET cantidad = cantidad - :val',
+    ExpressionAttributeValues={
+      ':val': Decimal(body['cantidad'])
+    }
+  )
+
+  body['id'] = get_autoincrement_id('gasto')
+  tabla.put_item(Item=body)
+  return body
+
+def insert_transferencia(body):
+  tabla = dynamodb.Table('GestorPersonal')
+  obligatory_attributes = ['cuenta_id_origen','cuenta_id_destino','tipo_movimiento_id','cantidad']
+  default_attributes = {
+    'datetime': datetime.now().isoformat(),
+    'descripcion': ''
+  }
+  check_values = {
+    'cuenta_id_origen': 'cuenta',
+    'cuenta_id_destino': 'cuenta',
+    'tipo_movimiento_id': 'tipo_movimiento'
+  }
+  if body['cuenta_id_origen'] == body['cuenta_id_destino']:
+    raise Exception('La cuenta de origen y destino no pueden ser la misma')
+
+  for attr in obligatory_attributes:
+    if attr not in body:
+      raise Exception('Falta el atributo ' + attr)
+
+  for key, value in default_attributes.items():
+    if key not in body:
+      body[key] = value
+
+  for key, value in check_values.items():
+    if key in body:
+      response = tabla.query(
+        AttributesToGet=['id'],
+        KeyConditions={
+          'entidad': {
+            'AttributeValueList': [value],
+            'ComparisonOperator': 'EQ'
+          },
+          'id': {
+            'AttributeValueList': [body[key]],
+            'ComparisonOperator': 'EQ'
+          }
+        },
+        Limit=1,
+      )
+      items = response.get('Items', [])
+      if len(items) == 0:
+        raise Exception('No existe el ' + value + ' con id ' + str(body[key]))
+
+  tabla.update_item(
+    Key={
+      'entidad': 'cuenta',
+      'id': body['cuenta_id_origen']
+    },
+    UpdateExpression='SET cantidad = cantidad - :val',
+    ExpressionAttributeValues={
+      ':val': Decimal(body['cantidad'])
+    }
+  )
+
+  tabla.update_item(
+    Key={
+      'entidad': 'cuenta',
+      'id': body['cuenta_id_destino']
+    },
+    UpdateExpression='SET cantidad = cantidad + :val',
+    ExpressionAttributeValues={
+      ':val': Decimal(body['cantidad'])
+    }
+  )
+
+  body['id'] = get_autoincrement_id('transferencia')
+  tabla.put_item(Item=body)
+  return body
+
+def insert_presupuesto(body):
+  tabla = dynamodb.Table('GestorPersonal')
+  obligatory_attributes = ['cantidad','tipo_movimiento_id','datetime_fin']
+  default_attributes = {
+    'descripcion': '',
+    'datetime_comienzo': datetime.now().isoformat()
+  }
+  check_values = {
+    'tipo_movimiento_id': 'tipo_movimiento'
+  }
+
+  for attr in obligatory_attributes:
+    if attr not in body:
+      raise Exception('Falta el atributo ' + attr)
+
+  for key, value in default_attributes.items():
+    if key not in body:
+      body[key] = value
+
+  for key, value in check_values.items():
+    if key in body:
+      response = tabla.query(
+        AttributesToGet=['id'],
+        KeyConditions={
+          'entidad': {
+            'AttributeValueList': [value],
+            'ComparisonOperator': 'EQ'
+          },
+          'id': {
+            'AttributeValueList': [body[key]],
+            'ComparisonOperator': 'EQ'
+          }
+        },
+        Limit=1,
+      )
+      items = response.get('Items', [])
+      if len(items) == 0:
+        raise Exception('No existe el ' + value + ' con id ' + str(body[key]))
+
+  body['id'] = get_autoincrement_id('presupuesto')
+  tabla.put_item(Item=body)
+  return body

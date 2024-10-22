@@ -86,6 +86,7 @@
 |id|N|AUTOINCREMENT|
 |nombre|S|NOT NULL|
 |tipo_movimiento|S|NOT NULL [transferencia,ingreso,gasto]|
+|descripcion|S||
 
 ### Ingreso - ingreso
 |Atributo|Tipo|Comentarios|
@@ -126,4 +127,4 @@
 |descripcion|S||
 |datetime_comienzo|S|por defecto now() NOT NULL|
 |datetime_fin|S|NOT NULL|
-|tipo_movimiento_id|N|tipo_movimiento.id NOT NULL
+|tipo_movimiento_id|N|tipo_movimiento.id NOT NULL|
